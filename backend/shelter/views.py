@@ -47,6 +47,7 @@ from .serializers import (
     ShelterSerializer,
     ShelterTaskSerializer,
     UserSerializer,
+    persist_uploaded_file,
 )
 
 
@@ -373,7 +374,7 @@ class MyProfileView(APIView):
             if field in request.data:
                 setattr(profile, field, request.data[field])
         if request.FILES.get("profile_photo"):
-            profile.profile_photo = request.FILES["profile_photo"]
+            persist_uploaded_file(profile, "profile_photo", request.FILES["profile_photo"])
         profile.save()
         log_action(user, current_shelter(user), "profile_updated", user, "Perfil de usuario actualizado.")
         return Response(UserSerializer(user, context={"request": request}).data)
@@ -418,7 +419,7 @@ class AdopterMeView(APIView):
             if field in request.data:
                 setattr(profile, field, request.data[field])
         if request.FILES.get("profile_photo"):
-            profile.profile_photo = request.FILES["profile_photo"]
+            persist_uploaded_file(profile, "profile_photo", request.FILES["profile_photo"])
         profile.role = "adopter"
         profile.save()
 
@@ -431,7 +432,7 @@ class AdopterMeView(APIView):
         if "has_pets" in request.data:
             adopter.has_pets = str(request.data["has_pets"]).lower() in ["1", "true", "si", "yes", "on"]
         if request.FILES.get("identity_document"):
-            adopter.identity_document = request.FILES["identity_document"]
+            persist_uploaded_file(adopter, "identity_document", request.FILES["identity_document"])
         adopter.save()
         return Response(AdopterSerializer(adopter, context={"request": request}).data)
 

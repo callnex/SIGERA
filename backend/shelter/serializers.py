@@ -33,6 +33,12 @@ def file_url_or_empty(file_field):
     return file_field.url
 
 
+def persist_uploaded_file(instance, field_name, uploaded_file):
+    if not uploaded_file:
+        return
+    getattr(instance, field_name).save(uploaded_file.name, uploaded_file, save=False)
+
+
 class UserProfileSerializer(serializers.ModelSerializer):
     role_label = serializers.CharField(source="get_role_display", read_only=True)
     shelter_code = serializers.CharField(source="shelter.code", read_only=True)
@@ -78,15 +84,18 @@ class UserSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         profile_data = self._profile_payload(validated_data)
+        profile_photo = profile_data.pop("profile_photo", None)
         password = validated_data.pop("password", None) or "Sigera123*"
         user = User.objects.create_user(password=password, **validated_data)
         for key, value in profile_data.items():
             setattr(user.profile, key, value)
+        persist_uploaded_file(user.profile, "profile_photo", profile_photo)
         user.profile.save()
         return user
 
     def update(self, instance, validated_data):
         profile_data = self._profile_payload(validated_data)
+        profile_photo = profile_data.pop("profile_photo", None)
         password = validated_data.pop("password", None)
         for key, value in validated_data.items():
             setattr(instance, key, value)
@@ -95,6 +104,7 @@ class UserSerializer(serializers.ModelSerializer):
         instance.save()
         for key, value in profile_data.items():
             setattr(instance.profile, key, value)
+        persist_uploaded_file(instance.profile, "profile_photo", profile_photo)
         instance.profile.save()
         return instance
 
@@ -113,6 +123,20 @@ class ShelterSerializer(serializers.ModelSerializer):
 
     def get_logo_url(self, obj):
         return file_url_or_empty(obj.logo)
+
+    def create(self, validated_data):
+        logo = validated_data.pop("logo", None)
+        shelter = super().create(validated_data)
+        persist_uploaded_file(shelter, "logo", logo)
+        shelter.save()
+        return shelter
+
+    def update(self, instance, validated_data):
+        logo = validated_data.pop("logo", None)
+        shelter = super().update(instance, validated_data)
+        persist_uploaded_file(shelter, "logo", logo)
+        shelter.save()
+        return shelter
 
 
 class ShelterLocationSerializer(serializers.ModelSerializer):
@@ -193,6 +217,20 @@ class MedicalRecordSerializer(serializers.ModelSerializer):
     def get_attachment_url(self, obj):
         return file_url_or_empty(obj.attachment)
 
+    def create(self, validated_data):
+        attachment = validated_data.pop("attachment", None)
+        record = super().create(validated_data)
+        persist_uploaded_file(record, "attachment", attachment)
+        record.save()
+        return record
+
+    def update(self, instance, validated_data):
+        attachment = validated_data.pop("attachment", None)
+        record = super().update(instance, validated_data)
+        persist_uploaded_file(record, "attachment", attachment)
+        record.save()
+        return record
+
 
 class AnimalSerializer(serializers.ModelSerializer):
     species_label = serializers.CharField(source="get_species_display", read_only=True)
@@ -211,6 +249,20 @@ class AnimalSerializer(serializers.ModelSerializer):
 
     def get_photo_url(self, obj):
         return file_url_or_empty(obj.photo)
+
+    def create(self, validated_data):
+        photo = validated_data.pop("photo", None)
+        animal = super().create(validated_data)
+        persist_uploaded_file(animal, "photo", photo)
+        animal.save()
+        return animal
+
+    def update(self, instance, validated_data):
+        photo = validated_data.pop("photo", None)
+        animal = super().update(instance, validated_data)
+        persist_uploaded_file(animal, "photo", photo)
+        animal.save()
+        return animal
 
     def get_adoption_processes(self, obj):
         return [
@@ -352,6 +404,20 @@ class AdopterSerializer(serializers.ModelSerializer):
 
     def _animal_photo_url(self, animal):
         return file_url_or_empty(animal.photo)
+
+    def create(self, validated_data):
+        identity_document = validated_data.pop("identity_document", None)
+        adopter = super().create(validated_data)
+        persist_uploaded_file(adopter, "identity_document", identity_document)
+        adopter.save()
+        return adopter
+
+    def update(self, instance, validated_data):
+        identity_document = validated_data.pop("identity_document", None)
+        adopter = super().update(instance, validated_data)
+        persist_uploaded_file(adopter, "identity_document", identity_document)
+        adopter.save()
+        return adopter
 
 
 class AdoptionApplicationSerializer(serializers.ModelSerializer):
