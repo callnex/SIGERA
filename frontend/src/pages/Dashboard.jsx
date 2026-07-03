@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import { api, mediaUrl } from "../api/client";
 import { useAuth } from "../api/auth.jsx";
+import ImageWithFallback from "../components/ImageWithFallback.jsx";
 import { PageHeader, StatCard } from "../components/UI.jsx";
 import logoPaw from "../assets/logo-paw-blue.png";
 
@@ -59,7 +60,7 @@ export default function Dashboard() {
       </section>
       <section className="dashboard-profile-banner">
         <div>
-          <span className="profile-mini-avatar">{profilePhoto ? <img src={profilePhoto} alt="Foto de perfil" /> : <i className="bi bi-person-circle" />}</span>
+          <span className="profile-mini-avatar"><ImageWithFallback src={profilePhoto} alt="Foto de perfil" fallback={<i className="bi bi-person-circle" />} /></span>
           <span><strong>{user?.first_name || "Usuario"} {user?.last_name || ""}</strong><small>{user?.profile?.role_label} · {user?.profile?.shelter_name}</small></span>
         </div>
         <div className="dashboard-operational-data"><span><b>{summary.tasks_pending ?? 0}</b> tareas activas</span><span><b>{summary.occupancy ?? 0}/{summary.capacity || "-"}</b> ocupación</span></div>

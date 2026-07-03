@@ -2,6 +2,7 @@ import { Link, NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../api/auth.jsx";
 import { mediaUrl } from "../api/client";
 import logoPaw from "../assets/logo-paw-blue.png";
+import ImageWithFallback from "./ImageWithFallback.jsx";
 
 const nav = [
   { path: "", icon: "bi-grid", label: "Dashboard", roles: ["admin", "vet", "volunteer"] },
@@ -28,7 +29,9 @@ export default function AppLayout() {
     <div className="admin-shell">
       <aside className="sidebar">
         <Link className="brand-home-link brand-block" to="/" title="Ir al inicio de SIGERA">
-          <div className={`brand-icon ${profilePhoto ? "user-brand-photo" : ""}`}><img src={profilePhoto || logoPaw} alt="" /></div>
+          <div className={`brand-icon ${profilePhoto ? "user-brand-photo" : ""}`}>
+            <ImageWithFallback src={profilePhoto} fallback={<img src={logoPaw} alt="" />} alt="" />
+          </div>
           <div><strong>SIGERA</strong><span>Sistema de Gestion de Refugios de Animales</span></div>
         </Link>
         <nav>

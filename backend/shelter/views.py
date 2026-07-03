@@ -673,7 +673,6 @@ class DemoDataResetView(APIView):
             behavior_notes="Sociable, carinosa y tranquila.",
             public_description="Luna es una companera afectuosa y juguetona que busca una familia responsable.",
             personality_tags="Carinosa, Sociable, Tranquila",
-            photo="animals/luna.png",
             vaccinated=True,
             sterilized=True,
             dewormed=True,
@@ -699,7 +698,6 @@ class DemoDataResetView(APIView):
             behavior_notes="Observador y dulce.",
             public_description="Milo es curioso y disfruta de espacios tranquilos.",
             personality_tags="Curioso, Dulce",
-            photo="animals/milo.png",
             vaccinated=True,
             sterilized=True,
             adoption_ready=True,
@@ -722,7 +720,6 @@ class DemoDataResetView(APIView):
             region="Bogota D.C.",
             status=Animal.Status.TREATMENT,
             behavior_notes="En recuperacion y bajo observacion veterinaria.",
-            photo="animals/simba.png",
         )
         toby = Animal.objects.create(
             code=f"{code_prefix}-TOBY",
@@ -739,7 +736,6 @@ class DemoDataResetView(APIView):
             country="CO",
             region="Bogota D.C.",
             status=Animal.Status.ADOPTED,
-            photo="animals/luna.png",
         )
         MedicalRecord.objects.create(
             animal=bruno,

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, mediaUrl } from "../api/client";
 import { useAuth } from "../api/auth.jsx";
+import ImageWithFallback from "../components/ImageWithFallback.jsx";
 import { PageHeader } from "../components/UI.jsx";
 
 const empty = { first_name: "", last_name: "", email: "", phone: "", address: "", position: "", emergency_contact: "", emergency_phone: "", profile_photo: null, profile_photo_url: "" };
@@ -11,6 +12,7 @@ export default function Profile() {
   const [profile, setProfile] = useState(empty);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [localPhotoPreview, setLocalPhotoPreview] = useState("");
   const canEdit = Boolean(user?.profile?.role);
 
   useEffect(() => {
@@ -18,6 +20,16 @@ export default function Profile() {
       setProfile({ ...empty, first_name: data.first_name, last_name: data.last_name, email: data.email, ...data.profile });
     }).catch(() => setError("No fue posible cargar el perfil."));
   }, []);
+
+  useEffect(() => {
+    if (!(profile.profile_photo instanceof File)) {
+      setLocalPhotoPreview("");
+      return;
+    }
+    const objectUrl = URL.createObjectURL(profile.profile_photo);
+    setLocalPhotoPreview(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [profile.profile_photo]);
 
   async function save(event) {
     event.preventDefault();
@@ -35,14 +47,14 @@ export default function Profile() {
     }
   }
 
-  const photo = profile.profile_photo_url || (profile.profile_photo instanceof File ? URL.createObjectURL(profile.profile_photo) : "");
+  const photo = localPhotoPreview || mediaUrl(profile.profile_photo_url);
   return <>
     <PageHeader title="Mi perfil" subtitle="Informacion personal y acceso dentro del refugio." action={<Link className="secondary small" to="/admin/"><i className="bi bi-grid" /> Volver al dashboard</Link>} />
     {message && <div className="alert success">{message}</div>}
     {error && <div className="alert error">{error}</div>}
     <section className="profile-layout">
       <aside className="panel profile-card">
-        <div className="profile-photo">{photo ? <img src={photo.startsWith("blob:") ? photo : mediaUrl(photo)} alt="Foto de perfil" /> : <i className="bi bi-person" />}{canEdit && <><input id="profile-photo-input" className="visually-hidden" type="file" accept="image/*" onChange={(event) => setProfile({ ...profile, profile_photo: event.target.files[0] })} /><label className="profile-photo-upload" htmlFor="profile-photo-input" title="Cambiar foto de perfil"><i className="bi bi-camera" /></label></>}</div>
+        <div className="profile-photo"><ImageWithFallback src={photo} alt="Foto de perfil" fallback={<i className="bi bi-person" />} />{canEdit && <><input id="profile-photo-input" className="visually-hidden" type="file" accept="image/*" onChange={(event) => setProfile({ ...profile, profile_photo: event.target.files[0] })} /><label className="profile-photo-upload" htmlFor="profile-photo-input" title="Cambiar foto de perfil"><i className="bi bi-camera" /></label></>}</div>
         <h2>{profile.first_name} {profile.last_name}</h2>
         <p>{profile.position || profile.role_label || "Miembro del refugio"}</p>
         <span className="badge blue">{profile.shelter_name || user?.profile?.shelter_name}</span>

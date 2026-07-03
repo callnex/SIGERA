@@ -47,7 +47,6 @@ class Command(BaseCommand):
             dewormed=True,
             adoption_ready=True,
             is_public=True,
-            photo="animals/luna.png",
         )
         simba = self.animal(
             shelter=shelter,
@@ -69,7 +68,6 @@ class Command(BaseCommand):
             dewormed=False,
             adoption_ready=True,
             is_public=True,
-            photo="animals/simba.png",
         )
         toby = self.animal(
             shelter=shelter,
@@ -105,7 +103,6 @@ class Command(BaseCommand):
             vaccinated=True,
             adoption_ready=True,
             is_public=True,
-            photo="animals/milo.png",
         )
         self.animal(
             shelter=shelter,
