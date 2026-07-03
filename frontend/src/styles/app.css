@@ -1680,28 +1680,17 @@ dd { text-align: right; margin-top: -44px; }
   box-shadow: 18px 0 36px rgba(6, 28, 95, .1);
 }
 
-.adopter-brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: var(--blue);
-  text-decoration: none;
-  font-size: 26px;
+.adopter-brand-block {
+  padding-bottom: 22px;
+  margin-bottom: 6px;
 }
 
-.adopter-brand span {
-  width: 46px;
-  height: 46px;
-  display: grid;
-  place-items: center;
-  border-radius: 14px;
-  background: #edf5ff;
+.adopter-brand-block strong {
+  font-size: 24px;
 }
 
-.adopter-brand img {
-  width: 32px;
-  height: 32px;
-  object-fit: contain;
+.adopter-brand-block span {
+  font-size: 12px;
 }
 
 .adopter-user {
@@ -1709,20 +1698,21 @@ dd { text-align: right; margin-top: -44px; }
   grid-template-columns: 58px minmax(0, 1fr);
   gap: 12px;
   align-items: center;
-  padding: 14px;
-  border: 1px solid #d9e7fb;
-  border-radius: 18px;
-  background: linear-gradient(145deg, #fff, #f3f8ff);
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .92);
+  box-shadow: 0 12px 26px rgba(6, 28, 95, .075);
 }
 
 .adopter-user-photo {
   width: 58px;
   height: 58px;
   overflow: hidden;
-  border: 3px solid #fff;
+  border: 2px solid #d9eaff;
   border-radius: 50%;
-  background: #e8f2ff;
-  box-shadow: 0 10px 18px rgba(6, 28, 95, .12);
+  background: #edf5ff;
+  box-shadow: 0 8px 18px rgba(6, 28, 95, .13);
 }
 
 .adopter-user-photo img {
@@ -1749,7 +1739,8 @@ dd { text-align: right; margin-top: -44px; }
 .adopter-sidebar nav {
   display: grid;
   align-content: start;
-  gap: 10px;
+  gap: 6px;
+  overflow-y: auto;
 }
 
 .adopter-sidebar nav a,
@@ -1760,18 +1751,20 @@ dd { text-align: right; margin-top: -44px; }
   gap: 12px;
   padding: 0 14px;
   border: 1px solid transparent;
-  border-radius: 12px;
+  border-radius: 8px;
   background: transparent;
   color: var(--blue-dark);
   text-decoration: none;
-  font-weight: 800;
+  font-size: 16px;
+  transition: background-color .18s ease, color .18s ease, border-color .18s ease;
 }
 
 .adopter-sidebar nav a.active,
 .adopter-sidebar nav a:hover {
-  border-color: #a8ceff;
-  background: #eaf4ff;
+  border-color: #c6dcff;
+  background: #eaf3ff;
   color: var(--blue);
+  box-shadow: inset 3px 0 0 var(--blue);
 }
 
 .adopter-logout {
@@ -1794,20 +1787,21 @@ dd { text-align: right; margin-top: -44px; }
 .adopter-page-header,
 .adopter-panel,
 .adopter-stat {
-  border: 1px solid #cfe1ff;
-  background: rgba(255, 255, 255, .88);
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, .9);
   box-shadow: 0 18px 34px rgba(6, 28, 95, .08);
+  backdrop-filter: blur(10px);
 }
 
 .adopter-page-header {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 118px;
+  grid-template-columns: minmax(0, 1fr) 132px;
   gap: 24px;
   align-items: center;
-  padding: 34px;
-  border-radius: 24px;
+  padding: 36px;
+  border-radius: 8px;
   background:
-    radial-gradient(circle at 85% 20%, rgba(11, 99, 246, .12), transparent 32%),
+    radial-gradient(circle at 88% 16%, rgba(11, 99, 246, .14), transparent 30%),
     rgba(255,255,255,.9);
 }
 
@@ -1839,11 +1833,12 @@ dd { text-align: right; margin-top: -44px; }
 }
 
 .adopter-header-photo {
-  width: 112px;
-  height: 112px;
+  width: 128px;
+  height: 128px;
   display: grid;
   place-items: center;
   overflow: hidden;
+  justify-self: end;
   border: 5px solid #fff;
   border-radius: 50%;
   background: #e8f2ff;
@@ -1868,7 +1863,7 @@ dd { text-align: right; margin-top: -44px; }
   display: grid;
   gap: 9px;
   padding: 22px;
-  border-radius: 18px;
+  border-radius: 8px;
 }
 
 .adopter-stat i {
@@ -1896,6 +1891,14 @@ dd { text-align: right; margin-top: -44px; }
   line-height: 1;
 }
 
+.adopter-dashboard-banner {
+  margin: -8px 0 2px;
+}
+
+.adopter-operational-data {
+  justify-content: flex-end;
+}
+
 .adopter-dashboard-grid,
 .adopter-profile-layout {
   display: grid;
@@ -1905,7 +1908,7 @@ dd { text-align: right; margin-top: -44px; }
 }
 
 .adopter-panel {
-  border-radius: 20px;
+  border-radius: 8px;
   padding: 24px;
 }
 

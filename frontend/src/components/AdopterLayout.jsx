@@ -2,6 +2,7 @@ import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../api/auth.jsx";
 import { mediaUrl } from "../api/client";
 import logoPaw from "../assets/logo-paw-blue.png";
+import ImageWithFallback from "./ImageWithFallback.jsx";
 
 const nav = [
   { path: "", icon: "bi-grid", label: "Resumen" },
@@ -23,13 +24,15 @@ export default function AdopterLayout() {
   return (
     <div className="adopter-shell">
       <aside className="adopter-sidebar">
-        <Link className="adopter-brand" to="/">
-          <span><img src={logoPaw} alt="" /></span>
-          <strong>SIGERA</strong>
+        <Link className="brand-home-link brand-block adopter-brand-block" to="/" title="Ir al inicio de SIGERA">
+          <div className={`brand-icon ${profilePhoto ? "user-brand-photo" : ""}`}>
+            <ImageWithFallback src={profilePhoto} fallback={<img src={logoPaw} alt="" />} alt="" />
+          </div>
+          <div><strong>SIGERA</strong><span>Espacio personal para procesos de adopcion</span></div>
         </Link>
         <div className="adopter-user">
           <div className="adopter-user-photo">
-            {profilePhoto ? <img src={profilePhoto} alt="Foto de perfil" /> : <img src={logoPaw} alt="" />}
+            <ImageWithFallback src={profilePhoto} fallback={<img src={logoPaw} alt="" />} alt="Foto de perfil" />
           </div>
           <div>
             <strong>{displayName}</strong>

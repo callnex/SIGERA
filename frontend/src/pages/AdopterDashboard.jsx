@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../api/auth.jsx";
 import { api, mediaUrl } from "../api/client";
 import { AnimalPhoto, Badge } from "../components/UI.jsx";
+import ImageWithFallback from "../components/ImageWithFallback.jsx";
+import logoPaw from "../assets/logo-paw-blue.png";
 
 export default function AdopterDashboard() {
   const { user } = useAuth();
@@ -29,6 +31,7 @@ export default function AdopterDashboard() {
 
   const displayName = `${user?.first_name || data?.user?.first_name || ""} ${user?.last_name || data?.user?.last_name || ""}`.trim() || user?.email || "Adoptante";
   const profilePhoto = mediaUrl(user?.profile?.profile_photo_url || data?.user?.profile?.profile_photo_url);
+  const fullProfileReady = Boolean(data?.phone && data?.address);
 
   if (error) return <AdopterEmpty message={error} />;
   if (!data) return <main className="auth-loading">Cargando tu espacio de adopcion...</main>;
@@ -42,7 +45,7 @@ export default function AdopterDashboard() {
           <p>Consulta tus solicitudes, revisa los siguientes pasos y manten actualizados tus datos para que el refugio pueda contactarte.</p>
         </div>
         <div className="adopter-header-photo">
-          {profilePhoto ? <img src={profilePhoto} alt="Foto de perfil" /> : <i className="bi bi-person-heart" />}
+          <ImageWithFallback src={profilePhoto} alt="Foto de perfil" fallback={<img src={logoPaw} alt="" />} />
         </div>
       </div>
 
@@ -52,6 +55,23 @@ export default function AdopterDashboard() {
         <AdopterStat icon="bi-check2-circle" label="Aprobadas" value={summary.approved} />
         <AdopterStat icon="bi-calendar-heart" label="Seguimientos" value={summary.followUps} />
       </div>
+
+      <section className="dashboard-profile-banner adopter-dashboard-banner">
+        <div>
+          <span className="profile-mini-avatar">
+            <ImageWithFallback src={profilePhoto} alt="Foto de perfil" fallback={<img src={logoPaw} alt="" />} />
+          </span>
+          <span>
+            <strong>{displayName}</strong>
+            <small>Adoptante · {fullProfileReady ? "Perfil completo" : "Completa tu perfil para agilizar tu proceso"}</small>
+          </span>
+        </div>
+        <div className="dashboard-operational-data adopter-operational-data">
+          <span><b>{summary.total}</b> solicitudes</span>
+          <span><b>{summary.review}</b> en progreso</span>
+        </div>
+        <Link className="secondary small" to="/adoptante/perfil">Ver mi perfil <i className="bi bi-arrow-right" /></Link>
+      </section>
 
       <section className="adopter-dashboard-grid">
         {activeApplication ? <CurrentApplication application={activeApplication} /> : <NoApplications />}
