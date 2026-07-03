@@ -22,7 +22,7 @@ router.register("audit-logs", views.AuditLogViewSet)
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("api/auth/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
+    path("api/auth/token/", views.FlexibleTokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/auth/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("api/auth/register/adopter/", views.AdopterRegistrationView.as_view(), name="register_adopter"),
     path("api/auth/register/shelter/", views.ShelterRegistrationView.as_view(), name="register_shelter"),

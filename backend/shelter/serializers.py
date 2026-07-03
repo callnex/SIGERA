@@ -6,6 +6,7 @@ from django.core.mail import send_mail
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from rest_framework import serializers
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from .models import (
     Adopter,
@@ -616,3 +617,22 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
         user = self.validated_data["user"]
         user.set_password(self.validated_data["password"])
         user.save(update_fields=["password"])
+
+
+class FlexibleTokenObtainPairSerializer(TokenObtainPairSerializer):
+    """Allow shelter users to log in with either email or shelter code."""
+
+    @classmethod
+    def get_token(cls, user):
+        return super().get_token(user)
+
+    def validate(self, attrs):
+        submitted_value = (attrs.get("username") or "").strip()
+        if submitted_value:
+            matched_user = (
+                User.objects.filter(email__iexact=submitted_value).first()
+                or User.objects.filter(username__iexact=submitted_value).first()
+            )
+            if matched_user:
+                attrs["username"] = matched_user.username
+        return super().validate(attrs)

@@ -16,6 +16,7 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .models import (
     Adopter,
@@ -48,6 +49,7 @@ from .serializers import (
     ShelterTaskSerializer,
     UserSerializer,
     persist_uploaded_file,
+    FlexibleTokenObtainPairSerializer,
 )
 
 
@@ -353,6 +355,10 @@ class MeView(APIView):
 
     def get(self, request):
         return Response(UserSerializer(request.user).data)
+
+
+class FlexibleTokenObtainPairView(TokenObtainPairView):
+    serializer_class = FlexibleTokenObtainPairSerializer
 
 
 class MyProfileView(APIView):
