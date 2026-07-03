@@ -1,0 +1,23 @@
+{
+  "name": "sigera-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "^4.5.2",
+    "axios": "^1.10.0",
+    "bootstrap-icons": "^1.13.1",
+    "country-state-city": "^3.2.1",
+    "jspdf": "^3.0.1",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.6.2",
+    "recharts": "^2.15.3",
+    "vite": "^6.3.5"
+  }
+}
