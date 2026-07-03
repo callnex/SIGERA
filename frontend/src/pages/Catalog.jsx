@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { State } from "country-state-city";
 import { api, mediaUrl } from "../api/client";
-import { useAuth } from "../api/auth.jsx";
 import { AnimalPhoto } from "../components/UI.jsx";
 import logoPaw from "../assets/logo-paw-blue.png";
 
@@ -27,14 +26,12 @@ const normalizedRegion = (value) => value.normalize("NFD").replace(/[\u0300-\u03
 const countryName = (code) => latinCountries.find((country) => country.code === code)?.name || code;
 
 export default function Catalog() {
-  const { token, user } = useAuth();
   const [animals, setAnimals] = useState([]);
   const [filters, setFilters] = useState(baseFilters);
-  const scopedToShelter = Boolean(token && user?.profile?.shelter);
 
   useEffect(() => {
-    api.get("/catalog/", { params: { ...filters, ...(scopedToShelter ? { mine: "1" } : {}) } }).then((response) => setAnimals(response.data));
-  }, [filters, scopedToShelter]);
+    api.get("/catalog/", { params: filters }).then((response) => setAnimals(response.data));
+  }, [filters]);
 
   const regions = useMemo(() => (
     filters.country
@@ -66,7 +63,6 @@ export default function Catalog() {
       <section className="catalog-layout">
         <aside className="filters">
           <h2><i className="bi bi-filter" /> Filtros</h2>
-          {scopedToShelter && <p className="filter-note"><i className="bi bi-building-check" /> Mostrando animales publicados por tu refugio.</p>}
           <label>Pais<select value={filters.country} onChange={(event) => updateFilter("country", event.target.value)}><option value="">Todos los países</option>{latinCountries.map((country) => <option key={country.code} value={country.code}>{country.name}</option>)}</select></label>
           <label>Departamento o provincia<select value={filters.region} onChange={(event) => updateFilter("region", event.target.value)}><option value="">Todas las regiones</option>{regions.map((region) => <option key={region.value} value={region.value}>{region.label}</option>)}</select></label>
           <label>Especie<select value={filters.species} onChange={(event) => updateFilter("species", event.target.value)}><option value="">Todas</option><option value="dog">Perros</option><option value="cat">Gatos</option><option value="other">Otros</option></select></label>
