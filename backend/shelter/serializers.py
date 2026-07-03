@@ -39,8 +39,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
     def get_profile_photo_url(self, obj):
         if not obj.profile_photo:
             return ""
-        request = self.context.get("request")
-        return request.build_absolute_uri(obj.profile_photo.url) if request else obj.profile_photo.url
+        return obj.profile_photo.url
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -106,8 +105,7 @@ class ShelterSerializer(serializers.ModelSerializer):
     def get_logo_url(self, obj):
         if not obj.logo:
             return ""
-        request = self.context.get("request")
-        return request.build_absolute_uri(obj.logo.url) if request else obj.logo.url
+        return obj.logo.url
 
 
 class ShelterLocationSerializer(serializers.ModelSerializer):
@@ -124,7 +122,6 @@ class ShelterLocationSerializer(serializers.ModelSerializer):
         return obj.animals.exclude(status__in=["adopted", "deceased", "lost"]).count()
 
     def get_animals(self, obj):
-        request = self.context.get("request")
         records = obj.animals.exclude(status__in=["adopted", "deceased", "lost"]).order_by("name")
         return [
             {
@@ -133,7 +130,7 @@ class ShelterLocationSerializer(serializers.ModelSerializer):
                 "code": animal.code,
                 "species": animal.get_species_display(),
                 "status": animal.get_status_display(),
-                "photo_url": request.build_absolute_uri(animal.photo.url) if request and animal.photo else (animal.photo.url if animal.photo else ""),
+                "photo_url": animal.photo.url if animal.photo else "",
             }
             for animal in records
         ]
@@ -189,8 +186,7 @@ class MedicalRecordSerializer(serializers.ModelSerializer):
     def get_attachment_url(self, obj):
         if not obj.attachment:
             return ""
-        request = self.context.get("request")
-        return request.build_absolute_uri(obj.attachment.url) if request else obj.attachment.url
+        return obj.attachment.url
 
 
 class AnimalSerializer(serializers.ModelSerializer):
@@ -211,9 +207,7 @@ class AnimalSerializer(serializers.ModelSerializer):
     def get_photo_url(self, obj):
         if not obj.photo:
             return ""
-        request = self.context.get("request")
-        url = obj.photo.url
-        return request.build_absolute_uri(url) if request else url
+        return obj.photo.url
 
     def get_adoption_processes(self, obj):
         return [
@@ -356,8 +350,7 @@ class AdopterSerializer(serializers.ModelSerializer):
     def _animal_photo_url(self, animal):
         if not animal.photo:
             return ""
-        request = self.context.get("request")
-        return request.build_absolute_uri(animal.photo.url) if request else animal.photo.url
+        return animal.photo.url
 
 
 class AdoptionApplicationSerializer(serializers.ModelSerializer):
