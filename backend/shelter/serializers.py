@@ -22,6 +22,17 @@ from .models import (
 )
 
 
+def file_url_or_empty(file_field):
+    if not file_field:
+        return ""
+    try:
+        if not file_field.storage.exists(file_field.name):
+            return ""
+    except Exception:
+        return ""
+    return file_field.url
+
+
 class UserProfileSerializer(serializers.ModelSerializer):
     role_label = serializers.CharField(source="get_role_display", read_only=True)
     shelter_code = serializers.CharField(source="shelter.code", read_only=True)
@@ -37,9 +48,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
         read_only_fields = ["shelter", "shelter_code", "shelter_name"]
 
     def get_profile_photo_url(self, obj):
-        if not obj.profile_photo:
-            return ""
-        return obj.profile_photo.url
+        return file_url_or_empty(obj.profile_photo)
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -103,9 +112,7 @@ class ShelterSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "code", "created_at", "logo_url"]
 
     def get_logo_url(self, obj):
-        if not obj.logo:
-            return ""
-        return obj.logo.url
+        return file_url_or_empty(obj.logo)
 
 
 class ShelterLocationSerializer(serializers.ModelSerializer):
@@ -130,7 +137,7 @@ class ShelterLocationSerializer(serializers.ModelSerializer):
                 "code": animal.code,
                 "species": animal.get_species_display(),
                 "status": animal.get_status_display(),
-                "photo_url": animal.photo.url if animal.photo else "",
+                "photo_url": file_url_or_empty(animal.photo),
             }
             for animal in records
         ]
@@ -184,9 +191,7 @@ class MedicalRecordSerializer(serializers.ModelSerializer):
         return obj.veterinarian.get_full_name() or obj.veterinarian.username
 
     def get_attachment_url(self, obj):
-        if not obj.attachment:
-            return ""
-        return obj.attachment.url
+        return file_url_or_empty(obj.attachment)
 
 
 class AnimalSerializer(serializers.ModelSerializer):
@@ -205,9 +210,7 @@ class AnimalSerializer(serializers.ModelSerializer):
         read_only_fields = ["shelter", "created_at", "updated_at"]
 
     def get_photo_url(self, obj):
-        if not obj.photo:
-            return ""
-        return obj.photo.url
+        return file_url_or_empty(obj.photo)
 
     def get_adoption_processes(self, obj):
         return [
@@ -348,9 +351,7 @@ class AdopterSerializer(serializers.ModelSerializer):
         ]
 
     def _animal_photo_url(self, animal):
-        if not animal.photo:
-            return ""
-        return animal.photo.url
+        return file_url_or_empty(animal.photo)
 
 
 class AdoptionApplicationSerializer(serializers.ModelSerializer):
