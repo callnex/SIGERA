@@ -363,25 +363,18 @@ class FlexibleTokenObtainPairView(TokenObtainPairView):
 
 class MyProfileView(APIView):
     permission_classes = [IsAuthenticated]
+    parser_classes = [parsers.JSONParser, parsers.MultiPartParser, parsers.FormParser]
 
     def get(self, request):
         return Response(UserSerializer(request.user, context={"request": request}).data)
 
     def patch(self, request):
-        user = request.user
-        for field in ["first_name", "last_name", "email"]:
-            if field in request.data:
-                setattr(user, field, request.data[field])
-        if "email" in request.data:
-            user.username = request.data["email"] or user.username
-        user.save(update_fields=["first_name", "last_name", "email", "username"])
-        profile = user.profile
-        for field in ["phone", "address", "position", "emergency_contact", "emergency_phone"]:
-            if field in request.data:
-                setattr(profile, field, request.data[field])
-        if request.FILES.get("profile_photo"):
-            persist_uploaded_file(profile, "profile_photo", request.FILES["profile_photo"])
-        profile.save()
+        payload = request.data.copy()
+        for forbidden_field in ["role", "is_active", "profile", "username", "shelter", "is_active_staff"]:
+            payload.pop(forbidden_field, None)
+        serializer = UserSerializer(request.user, data=payload, partial=True, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
         log_action(user, current_shelter(user), "profile_updated", user, "Perfil de usuario actualizado.")
         return Response(UserSerializer(user, context={"request": request}).data)
 
@@ -407,36 +400,25 @@ class AdopterMeView(APIView):
         if not adopter:
             return Response({"detail": "No existe un perfil de adoptante para esta cuenta."}, status=status.HTTP_404_NOT_FOUND)
 
-        user = request.user
-        user_fields = ["first_name", "last_name", "email"]
-        changed_user_fields = []
-        for field in user_fields:
-            if field in request.data:
-                setattr(user, field, request.data[field])
-                changed_user_fields.append(field)
-        if "email" in request.data and request.data["email"]:
-            user.username = request.data["email"]
-            changed_user_fields.append("username")
-        if changed_user_fields:
-            user.save(update_fields=sorted(set(changed_user_fields)))
-
-        profile = user.profile
-        for field in ["phone", "address", "position", "emergency_contact", "emergency_phone"]:
-            if field in request.data:
-                setattr(profile, field, request.data[field])
-        if request.FILES.get("profile_photo"):
-            persist_uploaded_file(profile, "profile_photo", request.FILES["profile_photo"])
-        profile.role = "adopter"
-        profile.save()
+        payload = request.data.copy()
+        for forbidden_field in ["role", "is_active", "profile", "username", "shelter", "is_active_staff"]:
+            payload.pop(forbidden_field, None)
+        serializer = UserSerializer(request.user, data=payload, partial=True, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        user.profile.role = "adopter"
+        user.profile.save(update_fields=["role"])
 
         full_name = f"{user.first_name} {user.last_name}".strip()
         if full_name:
             adopter.full_name = full_name
         for field in ["phone", "email", "address", "housing_type", "owns_or_rents", "experience"]:
-            if field in request.data:
-                setattr(adopter, field, request.data[field])
-        if "has_pets" in request.data:
-            adopter.has_pets = str(request.data["has_pets"]).lower() in ["1", "true", "si", "yes", "on"]
+            if field in payload:
+                setattr(adopter, field, payload[field])
+        if "email" in payload:
+            adopter.email = user.email
+        if "has_pets" in payload:
+            adopter.has_pets = str(payload["has_pets"]).lower() in ["1", "true", "si", "yes", "on"]
         if request.FILES.get("identity_document"):
             persist_uploaded_file(adopter, "identity_document", request.FILES["identity_document"])
         adopter.save()

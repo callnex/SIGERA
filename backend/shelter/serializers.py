@@ -1,8 +1,10 @@
+from django.contrib.auth import password_validation
 from django.contrib.auth.models import User
 from django.db import transaction
 from django.conf import settings
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from rest_framework import serializers
@@ -40,6 +42,36 @@ def persist_uploaded_file(instance, field_name, uploaded_file):
     getattr(instance, field_name).save(uploaded_file.name, uploaded_file, save=False)
 
 
+def normalize_email(value):
+    return (value or "").strip().lower()
+
+
+def normalize_username(value):
+    return (value or "").strip()
+
+
+def find_user_for_login(value):
+    submitted_value = normalize_username(value)
+    if not submitted_value:
+        return None
+    return (
+        User.objects.filter(email__iexact=submitted_value).first()
+        or User.objects.filter(username__iexact=submitted_value).first()
+    )
+
+
+def user_identity_conflicts(email=None, username=None, exclude_user=None):
+    queryset = User.objects.all()
+    if exclude_user:
+        queryset = queryset.exclude(pk=exclude_user.pk)
+    conflicts = {}
+    if email and queryset.filter(email__iexact=email).exists():
+        conflicts["email"] = "Ya existe una cuenta con este correo."
+    if username and queryset.filter(username__iexact=username).exists():
+        conflicts["username"] = "Ya existe una cuenta con este usuario."
+    return conflicts
+
+
 class UserProfileSerializer(serializers.ModelSerializer):
     role_label = serializers.CharField(source="get_role_display", read_only=True)
     shelter_code = serializers.CharField(source="shelter.code", read_only=True)
@@ -59,9 +91,13 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    profile = UserProfileSerializer()
+    profile = UserProfileSerializer(required=False)
     password = serializers.CharField(write_only=True, required=False)
-    role = serializers.CharField(write_only=True, required=False)
+    role = serializers.ChoiceField(
+        write_only=True,
+        required=False,
+        choices=[UserProfile.Role.ADMIN, UserProfile.Role.VOLUNTEER, UserProfile.Role.VET, UserProfile.Role.ADOPTER],
+    )
     phone = serializers.CharField(write_only=True, required=False, allow_blank=True)
     address = serializers.CharField(write_only=True, required=False, allow_blank=True)
     position = serializers.CharField(write_only=True, required=False, allow_blank=True)
@@ -83,6 +119,42 @@ class UserSerializer(serializers.ModelSerializer):
                 profile_data[field] = validated_data.pop(field)
         return profile_data
 
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        instance = getattr(self, "instance", None)
+        current_email = normalize_email(getattr(instance, "email", ""))
+        current_username = normalize_username(getattr(instance, "username", ""))
+
+        if "email" in attrs:
+            attrs["email"] = normalize_email(attrs["email"])
+        if "username" in attrs:
+            attrs["username"] = normalize_username(attrs["username"])
+
+        email = attrs.get("email", current_email)
+        username = attrs.get("username", current_username)
+
+        if not instance and not username and email:
+            username = email
+            attrs["username"] = username
+
+        if instance and "email" in attrs and "username" not in attrs and current_username.lower() == current_email:
+            username = email
+            attrs["username"] = username
+
+        conflicts = user_identity_conflicts(email=email, username=username, exclude_user=instance)
+        if conflicts:
+            raise serializers.ValidationError(conflicts)
+
+        password = attrs.get("password")
+        if password:
+            try:
+                password_validation.validate_password(password, user=instance)
+            except DjangoValidationError as exc:
+                raise serializers.ValidationError({"password": list(exc.messages)})
+
+        return attrs
+
+    @transaction.atomic
     def create(self, validated_data):
         profile_data = self._profile_payload(validated_data)
         profile_photo = profile_data.pop("profile_photo", None)
@@ -94,6 +166,7 @@ class UserSerializer(serializers.ModelSerializer):
         user.profile.save()
         return user
 
+    @transaction.atomic
     def update(self, instance, validated_data):
         profile_data = self._profile_payload(validated_data)
         profile_photo = profile_data.pop("profile_photo", None)
@@ -452,14 +525,20 @@ class PublicApplicationSerializer(serializers.Serializer):
         animal = validated_data.pop("animal")
         password = validated_data.pop("password")
         motivation = validated_data.pop("motivation")
-        email = validated_data["email"]
-        user, created = User.objects.get_or_create(
-            username=email,
-            defaults={"email": email, "first_name": validated_data["full_name"].split(" ")[0]},
-        )
+        email = normalize_email(validated_data["email"])
+        validated_data["email"] = email
+        user = find_user_for_login(email)
+        created = user is None
         if created:
-            user.set_password(password)
-            user.save()
+            user = User.objects.create_user(
+                username=email,
+                email=email,
+                first_name=validated_data["full_name"].split(" ")[0],
+                password=password,
+            )
+        else:
+            user.email = email
+        if created:
             user.profile.role = UserProfile.Role.ADOPTER
             user.profile.phone = validated_data["phone"]
             user.profile.save()
@@ -488,9 +567,11 @@ class AdopterRegistrationSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True, min_length=8)
 
     def validate_email(self, value):
-        if User.objects.filter(username__iexact=value).exists():
-            raise serializers.ValidationError("Ya existe una cuenta con este correo.")
-        return value.lower()
+        email = normalize_email(value)
+        conflicts = user_identity_conflicts(email=email, username=email)
+        if conflicts:
+            raise serializers.ValidationError(conflicts.get("email") or conflicts.get("username"))
+        return email
 
     def validate(self, attrs):
         if Adopter.objects.filter(document_type=attrs["document_type"], document=attrs["document"]).exists():
@@ -538,9 +619,11 @@ class ShelterRegistrationSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True, min_length=8)
 
     def validate_email(self, value):
-        if User.objects.filter(email__iexact=value).exists():
-            raise serializers.ValidationError("Ya existe una cuenta con este correo.")
-        return value.lower()
+        email = normalize_email(value)
+        conflicts = user_identity_conflicts(email=email, username=email)
+        if conflicts:
+            raise serializers.ValidationError(conflicts.get("email") or conflicts.get("username"))
+        return email
 
     @transaction.atomic
     def create(self, validated_data):
@@ -627,12 +710,9 @@ class FlexibleTokenObtainPairSerializer(TokenObtainPairSerializer):
         return super().get_token(user)
 
     def validate(self, attrs):
-        submitted_value = (attrs.get("username") or "").strip()
+        submitted_value = normalize_username(attrs.get("username"))
         if submitted_value:
-            matched_user = (
-                User.objects.filter(email__iexact=submitted_value).first()
-                or User.objects.filter(username__iexact=submitted_value).first()
-            )
+            matched_user = find_user_for_login(submitted_value)
             if matched_user:
                 attrs["username"] = matched_user.username
         return super().validate(attrs)

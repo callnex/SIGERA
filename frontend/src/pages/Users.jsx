@@ -19,6 +19,18 @@ const initialForm = {
 };
 const editableProfile = ["phone", "address", "position", "emergency_contact", "emergency_phone"];
 
+function apiErrorMessage(error, fallback) {
+  const data = error?.response?.data;
+  if (!data) return fallback;
+  if (typeof data.detail === "string") return data.detail;
+  if (typeof data === "string") return data;
+  const messages = Object.entries(data).flatMap(([field, value]) => {
+    const list = Array.isArray(value) ? value : [value];
+    return list.filter(Boolean).map((message) => `${field}: ${message}`);
+  });
+  return messages[0] || fallback;
+}
+
 function emptyEdit(user) {
   return {
     id: user.id,
@@ -60,8 +72,8 @@ export default function Users() {
       setForm(initialForm);
       setMessage("Usuario creado correctamente.");
       load();
-    } catch {
-      setError("No fue posible crear el usuario. Revisa que el correo no este en uso.");
+    } catch (error) {
+      setError(apiErrorMessage(error, "No fue posible crear el usuario."));
     }
   }
 
@@ -76,8 +88,8 @@ export default function Users() {
       setMessage("Usuario actualizado correctamente.");
       await load();
       if (editing.id === currentUser?.id) await refreshUser();
-    } catch {
-      setError("No fue posible actualizar el usuario.");
+    } catch (error) {
+      setError(apiErrorMessage(error, "No fue posible actualizar el usuario."));
     }
   }
 

@@ -69,6 +69,56 @@ class TenantIsolationTests(APITestCase):
         self.assertEqual(profile.shelter, self.shelter_one)
         self.assertEqual(profile.role, UserProfile.Role.VOLUNTEER)
 
+    def test_admin_can_create_staff_from_multipart_payload(self):
+        self.client.force_authenticate(self.admin_one)
+
+        response = self.client.post(
+            "/api/users/",
+            {
+                "username": "antoni@example.com",
+                "email": "antoni@example.com",
+                "first_name": "Antoni",
+                "last_name": "Malte",
+                "password": "Temporary-pass-123",
+                "phone": "322406454",
+                "address": "Cra 54",
+                "position": "Veterinario",
+                "emergency_contact": "25412454",
+                "emergency_phone": "5454254",
+                "role": "vet",
+            },
+            format="multipart",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        created_user = User.objects.get(email="antoni@example.com")
+        self.assertEqual(created_user.profile.role, UserProfile.Role.VET)
+        self.assertEqual(created_user.profile.shelter, self.shelter_one)
+
+    def test_admin_cannot_create_staff_with_case_insensitive_duplicate_email(self):
+        User.objects.create_user(
+            username="existing@example.com",
+            email="existing@example.com",
+            password="temporary-pass",
+        )
+        self.client.force_authenticate(self.admin_one)
+
+        response = self.client.post(
+            "/api/users/",
+            {
+                "username": "Existing@Example.com",
+                "email": "Existing@Example.com",
+                "first_name": "Existing",
+                "last_name": "User",
+                "password": "Temporary-pass-123",
+                "role": "volunteer",
+            },
+            format="multipart",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("email", response.data)
+
     def test_veterinarian_can_access_inventory_and_medical_records(self):
         self.client.force_authenticate(self.vet_one)
 
@@ -115,6 +165,35 @@ class TenantIsolationTests(APITestCase):
         self.assertEqual(vet_response.status_code, status.HTTP_200_OK)
         self.vet_one.profile.refresh_from_db()
         self.assertEqual(self.vet_one.profile.position, "Veterinario")
+
+    def test_profile_update_rejects_duplicate_email_with_validation_error(self):
+        duplicate_user = User.objects.create_user(
+            username="duplicate@example.com",
+            email="duplicate@example.com",
+            password="temporary-pass",
+        )
+        duplicate_user.profile.role = UserProfile.Role.VOLUNTEER
+        duplicate_user.profile.shelter = self.shelter_one
+        duplicate_user.profile.save(update_fields=["role", "shelter"])
+
+        self.client.force_authenticate(self.admin_one)
+        response = self.client.patch("/api/profile/", {"email": "Duplicate@Example.com"}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("email", response.data)
+
+    def test_shelter_admin_can_log_in_with_email_even_if_username_is_shelter_code(self):
+        self.admin_one.email = "admin-uno@example.com"
+        self.admin_one.save(update_fields=["email"])
+
+        response = self.client.post(
+            "/api/auth/token/",
+            {"username": "ADMIN-UNO@example.com", "password": "temporary-pass"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("access", response.data)
 
     def test_location_is_created_inside_the_administrator_shelter(self):
         self.client.force_authenticate(self.admin_one)
