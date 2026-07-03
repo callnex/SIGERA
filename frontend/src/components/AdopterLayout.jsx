@@ -6,15 +6,14 @@ import ImageWithFallback from "./ImageWithFallback.jsx";
 
 const nav = [
   { path: "", icon: "bi-grid", label: "Resumen" },
-  { path: "seguimiento", icon: "bi-heart-pulse", label: "Seguimiento" },
   { path: "perfil", icon: "bi-person-circle", label: "Mi perfil" },
+  { path: "seguimiento", icon: "bi-heart-pulse", label: "Seguimiento" },
 ];
 
 export default function AdopterLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const profilePhoto = mediaUrl(user?.profile?.profile_photo_url);
-  const displayName = `${user?.first_name || ""} ${user?.last_name || ""}`.trim() || user?.email || "Adoptante";
 
   function signOut() {
     logout();
@@ -28,17 +27,11 @@ export default function AdopterLayout() {
           <div className={`brand-icon ${profilePhoto ? "user-brand-photo" : ""}`}>
             <ImageWithFallback src={profilePhoto} fallback={<img src={logoPaw} alt="" />} alt="" />
           </div>
-          <div><strong>SIGERA</strong><span>Espacio personal para procesos de adopcion</span></div>
-        </Link>
-        <div className="adopter-user">
-          <div className="adopter-user-photo">
-            <ImageWithFallback src={profilePhoto} fallback={<img src={logoPaw} alt="" />} alt="Foto de perfil" />
-          </div>
           <div>
-            <strong>{displayName}</strong>
-            <span>Perfil de adoptante</span>
+            <strong>SIGERA</strong>
+            <span>Sistema de Gestion de Refugios de Animales</span>
           </div>
-        </div>
+        </Link>
         <nav>
           {nav.map((item) => (
             <NavLink key={item.path} to={`/adoptante/${item.path}`} end={item.path === ""}>
@@ -46,7 +39,6 @@ export default function AdopterLayout() {
             </NavLink>
           ))}
           <NavLink to="/catalogo"><i className="bi bi-search-heart" /> Catalogo</NavLink>
-          <NavLink to="/"><i className="bi bi-house" /> Inicio</NavLink>
         </nav>
         <button className="logout adopter-logout" type="button" onClick={signOut}><i className="bi bi-box-arrow-right" /> Cerrar sesion</button>
       </aside>

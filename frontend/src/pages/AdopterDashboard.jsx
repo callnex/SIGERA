@@ -63,7 +63,7 @@ export default function AdopterDashboard() {
           </span>
           <span>
             <strong>{displayName}</strong>
-            <small>Adoptante · {fullProfileReady ? "Perfil completo" : "Completa tu perfil para agilizar tu proceso"}</small>
+            <small>Adoptante - {fullProfileReady ? "Perfil completo" : "Completa tu perfil para agilizar tu proceso"}</small>
           </span>
         </div>
         <div className="dashboard-operational-data adopter-operational-data">

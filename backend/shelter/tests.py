@@ -1,4 +1,5 @@
 from django.contrib.auth.models import User
+from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -201,6 +202,60 @@ class TenantIsolationTests(APITestCase):
         self.assertEqual(response.data["available"], 2)
         self.assertEqual(response.data["adoptions"], 1)
         self.assertEqual(response.data["alerts_attended_rate"], 50)
+
+    def test_authenticated_adopter_can_submit_application_without_retyping_password(self):
+        animal = Animal.objects.get(code="TENANT-ONE")
+        animal.status = Animal.Status.AVAILABLE
+        animal.adoption_ready = True
+        animal.is_public = True
+        animal.save(update_fields=["status", "adoption_ready", "is_public", "updated_at"])
+
+        adopter_user = User.objects.create_user(
+            username="adopter-form@example.com",
+            email="adopter-form@example.com",
+            password="temporary-pass",
+            first_name="Ana",
+            last_name="Lopez",
+        )
+        adopter_user.profile.role = UserProfile.Role.ADOPTER
+        adopter_user.profile.save(update_fields=["role"])
+        adopter = Adopter.objects.create(
+            user=adopter_user,
+            full_name="Ana Lopez",
+            document_type="CC",
+            document="55555",
+            phone="3002223344",
+            email="adopter-form@example.com",
+            address="Bogota",
+            housing_type="house",
+            owns_or_rents="own",
+            has_pets=True,
+            experience="Tiene experiencia previa.",
+            identity_document=SimpleUploadedFile("id.pdf", b"dummy-pdf", content_type="application/pdf"),
+        )
+
+        self.client.force_authenticate(adopter_user)
+        response = self.client.post(
+            "/api/catalog/",
+            {
+                "animal": animal.id,
+                "full_name": adopter.full_name,
+                "document_type": adopter.document_type,
+                "document": adopter.document,
+                "phone": adopter.phone,
+                "email": adopter.email,
+                "address": adopter.address,
+                "housing_type": adopter.housing_type,
+                "owns_or_rents": adopter.owns_or_rents,
+                "has_pets": adopter.has_pets,
+                "experience": adopter.experience,
+                "motivation": "Quiero darle un hogar.",
+            },
+            format="multipart",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(AdoptionApplication.objects.filter(adopter=adopter, animal=animal).count(), 1)
 
     def test_staff_can_update_own_profile(self):
         self.client.force_authenticate(self.admin_one)

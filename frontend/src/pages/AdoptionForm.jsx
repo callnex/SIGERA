@@ -1,20 +1,49 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { useAuth } from "../api/auth.jsx";
 import { api, mediaUrl } from "../api/client";
 import { AnimalPhoto, Badge, FileUpload } from "../components/UI.jsx";
 
 export default function AdoptionForm() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [animal, setAnimal] = useState(null);
   const [ok, setOk] = useState(false);
+  const [loadingProfile, setLoadingProfile] = useState(false);
   const [form, setForm] = useState({
     full_name: "", document_type: "CC", document: "", identity_document: null, phone: "",
     email: "", password: "", address: "", housing_type: "", owns_or_rents: "",
     has_pets: false, experience: "", motivation: "",
   });
+  const [identityDocumentName, setIdentityDocumentName] = useState("");
 
   useEffect(() => { api.get(`/catalog/${id}/`).then((res) => setAnimal(res.data)); }, [id]);
+
+  useEffect(() => {
+    const isAdopter = user?.profile?.role === "adopter";
+    if (!isAdopter) return;
+    setLoadingProfile(true);
+    api.get("/adopter/me/")
+      .then(({ data }) => {
+        setForm((current) => ({
+          ...current,
+          full_name: data.full_name || `${data.user?.first_name || ""} ${data.user?.last_name || ""}`.trim(),
+          document_type: data.document_type || current.document_type,
+          document: data.document || "",
+          phone: data.phone || "",
+          email: data.email || data.user?.email || "",
+          address: data.address || "",
+          housing_type: data.housing_type || "",
+          owns_or_rents: data.owns_or_rents || "",
+          has_pets: Boolean(data.has_pets),
+          experience: data.experience || "",
+        }));
+        const existingDocument = data.identity_document ? data.identity_document.split("/").pop() : "";
+        setIdentityDocumentName(existingDocument || "");
+      })
+      .finally(() => setLoadingProfile(false));
+  }, [user]);
 
   async function submit(e) {
     e.preventDefault();
@@ -28,6 +57,8 @@ export default function AdoptionForm() {
   }
 
   if (!animal) return <main className="public-page">Cargando...</main>;
+
+  const isLoggedAdopter = user?.profile?.role === "adopter";
 
   return (
     <main className="public-page adoption-request-page">
@@ -50,6 +81,7 @@ export default function AdoptionForm() {
       </section>
 
       {ok && <div className="alert success">Solicitud enviada correctamente.</div>}
+      {loadingProfile && <div className="alert success">Cargando tus datos guardados para completar la solicitud.</div>}
 
       <form className="adoption-request-layout public-form" onSubmit={submit}>
         <div className="adoption-form-stack">
@@ -61,7 +93,7 @@ export default function AdoptionForm() {
               <Field label="Numero de documento" value={form.document} onChange={(v) => setForm({ ...form, document: v })} />
               <Field label="Telefono" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} />
               <Field label="Correo electronico" value={form.email} type="email" onChange={(v) => setForm({ ...form, email: v })} />
-              <Field label="Contrasena para tu cuenta" value={form.password} type="password" onChange={(v) => setForm({ ...form, password: v })} />
+              {!isLoggedAdopter ? <Field label="Contrasena para tu cuenta" value={form.password} type="password" onChange={(v) => setForm({ ...form, password: v })} /> : <div className="adoption-prefill-note"><strong>Cuenta vinculada</strong><span>Usaremos tu cuenta actual para esta solicitud.</span></div>}
             </div>
             <Field label="Direccion completa" value={form.address} onChange={(v) => setForm({ ...form, address: v })} />
             <FileUpload
@@ -70,7 +102,7 @@ export default function AdoptionForm() {
               file={form.identity_document}
               onChange={(file) => setForm({ ...form, identity_document: file })}
               title="Documento de identidad"
-              helper="Adjunta PDF, JPG, JPEG o PNG"
+              helper={identityDocumentName ? `Documento actual: ${identityDocumentName}` : "Adjunta PDF, JPG, JPEG o PNG"}
               icon="bi-cloud-arrow-up"
             />
           </section>

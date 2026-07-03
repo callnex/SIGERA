@@ -516,10 +516,10 @@ class PublicApplicationSerializer(serializers.Serializer):
     full_name = serializers.CharField(max_length=160)
     document_type = serializers.CharField(max_length=30, required=False, allow_blank=True)
     document = serializers.CharField(max_length=60)
-    identity_document = serializers.FileField(required=True, allow_empty_file=False)
+    identity_document = serializers.FileField(required=False, allow_empty_file=False)
     phone = serializers.CharField(max_length=30)
     email = serializers.EmailField()
-    password = serializers.CharField(write_only=True, min_length=8)
+    password = serializers.CharField(write_only=True, min_length=8, required=False, allow_blank=True)
     address = serializers.CharField(max_length=255)
     housing_type = serializers.CharField(max_length=80)
     owns_or_rents = serializers.CharField(max_length=80)
@@ -527,31 +527,70 @@ class PublicApplicationSerializer(serializers.Serializer):
     experience = serializers.CharField(allow_blank=True, required=False)
     motivation = serializers.CharField()
 
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        request = self.context.get("request")
+        email = normalize_email(attrs.get("email"))
+        attrs["email"] = email
+        existing_user = find_user_for_login(email)
+        existing_adopter = Adopter.objects.filter(email__iexact=email).first()
+        current_user = getattr(request, "user", None)
+        logged_in_adopter = bool(
+            current_user
+            and getattr(current_user, "is_authenticated", False)
+            and getattr(getattr(current_user, "profile", None), "role", None) == UserProfile.Role.ADOPTER
+        )
+
+        if not logged_in_adopter and existing_user is None and not attrs.get("password"):
+            raise serializers.ValidationError({"password": "Debes crear una contrasena para tu cuenta."})
+
+        if not attrs.get("identity_document"):
+            has_existing_document = bool(existing_adopter and existing_adopter.identity_document)
+            if not has_existing_document:
+                raise serializers.ValidationError({"identity_document": "Adjunta tu documento de identidad."})
+
+        return attrs
+
     def create(self, validated_data):
+        request = self.context.get("request")
         animal = validated_data.pop("animal")
-        password = validated_data.pop("password")
+        password = validated_data.pop("password", "")
         motivation = validated_data.pop("motivation")
-        email = normalize_email(validated_data["email"])
-        validated_data["email"] = email
-        user = find_user_for_login(email)
+        email = validated_data["email"]
+        identity_document = validated_data.pop("identity_document", None)
+        name_parts = validated_data["full_name"].split(maxsplit=1)
+        first_name = name_parts[0]
+        last_name = name_parts[1] if len(name_parts) > 1 else ""
+        current_user = getattr(request, "user", None)
+        if current_user and getattr(current_user, "is_authenticated", False) and getattr(getattr(current_user, "profile", None), "role", None) == UserProfile.Role.ADOPTER:
+            user = current_user
+        else:
+            user = find_user_for_login(email)
         created = user is None
         if created:
             user = User.objects.create_user(
                 username=email,
                 email=email,
-                first_name=validated_data["full_name"].split(" ")[0],
+                first_name=first_name,
+                last_name=last_name,
                 password=password,
             )
         else:
             user.email = email
+            user.first_name = first_name
+            user.last_name = last_name
+            user.save(update_fields=["email", "first_name", "last_name"])
         if created:
             user.profile.role = UserProfile.Role.ADOPTER
-            user.profile.phone = validated_data["phone"]
-            user.profile.save()
+        user.profile.phone = validated_data["phone"]
+        user.profile.address = validated_data["address"]
+        user.profile.save()
         adopter, _ = Adopter.objects.update_or_create(
             email=email,
             defaults={**validated_data, "user": user},
         )
+        persist_uploaded_file(adopter, "identity_document", identity_document)
+        adopter.save()
         application = AdoptionApplication.objects.create(
             animal=animal,
             adopter=adopter,
