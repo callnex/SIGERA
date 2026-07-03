@@ -2,16 +2,13 @@ services:
   - type: web
     name: sigera-backend
     runtime: python
+    plan: free
     rootDir: backend
     buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput
     preDeployCommand: python manage.py migrate
     initialDeployHook: python manage.py bootstrap_media
     startCommand: gunicorn sigera.wsgi:application --bind 0.0.0.0:$PORT
     healthCheckPath: /api/schema/
-    disk:
-      name: sigera-media
-      mountPath: /var/data/media
-      sizeGB: 5
     envVars:
       - key: DEBUG
         value: "0"
@@ -19,8 +16,6 @@ services:
         value: 3.12.3
       - key: SECRET_KEY
         generateValue: true
-      - key: MEDIA_ROOT
-        value: /var/data/media
       - key: SERVE_MEDIA
         value: "1"
       - key: DATABASE_URL
@@ -62,3 +57,4 @@ services:
 
 databases:
   - name: sigera-db
+    plan: free
