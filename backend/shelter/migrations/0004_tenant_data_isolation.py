@@ -9,7 +9,7 @@ def assign_existing_data_to_primary_shelter(apps, schema_editor):
     UserProfile = apps.get_model("shelter", "UserProfile")
 
     shelter, _ = Shelter.objects.get_or_create(
-        code="SIG-PRINCIPAL",
+        code="SIG-PRIMARY",
         defaults={
             "name": "Refugio SIGERA Principal",
             "organization_document": "NIT-000000000",

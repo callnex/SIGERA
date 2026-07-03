@@ -173,7 +173,7 @@ class Command(BaseCommand):
 
     def shelter(self):
         shelter, _ = Shelter.objects.get_or_create(
-            code="SIG-PRINCIPAL",
+            code="SIG-PRIMARY",
             defaults={
                 "name": "Refugio SIGERA Principal",
                 "organization_document": "NIT-000000000",
