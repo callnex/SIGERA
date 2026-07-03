@@ -26,6 +26,7 @@ from .models import (
     InventoryItem,
     InventoryMovement,
     MedicalRecord,
+    Shelter,
     ShelterLocation,
     ShelterTask,
 )
@@ -499,6 +500,30 @@ class PublicAnimalDetailView(generics.RetrieveAPIView):
     queryset = Animal.objects.select_related("shelter").filter(is_public=True, adoption_ready=True)
     serializer_class = PublicAnimalSerializer
     permission_classes = [AllowAny]
+
+
+class PublicImpactStatsView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        public_animals = Animal.objects.filter(is_public=True, adoption_ready=True).exclude(status=Animal.Status.ADOPTED)
+        adoptions = AdoptionApplication.objects.filter(
+            status__in=[AdoptionApplication.Status.FORMALIZED, AdoptionApplication.Status.FOLLOW_UP]
+        )
+        tasks_total = ShelterTask.objects.count()
+        tasks_completed = ShelterTask.objects.filter(status=ShelterTask.Status.COMPLETED).count()
+        alert_resolution_rate = 100 if tasks_total == 0 else round((tasks_completed / tasks_total) * 100)
+        return Response(
+            {
+                "animals_registered": Animal.objects.count(),
+                "available": public_animals.count(),
+                "adoptions": adoptions.count(),
+                "alerts_attended_rate": alert_resolution_rate,
+                "shelters_active": Shelter.objects.count(),
+                "tasks_completed": tasks_completed,
+                "tasks_total": tasks_total,
+            }
+        )
 
 
 class ReportSummaryView(APIView):

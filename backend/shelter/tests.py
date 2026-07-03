@@ -2,7 +2,7 @@ from django.contrib.auth.models import User
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from .models import Animal, InventoryItem, MedicalRecord, Shelter, ShelterLocation, UserProfile
+from .models import AdoptionApplication, Adopter, Animal, InventoryItem, MedicalRecord, Shelter, ShelterLocation, ShelterTask, UserProfile
 
 
 class TenantIsolationTests(APITestCase):
@@ -152,6 +152,56 @@ class TenantIsolationTests(APITestCase):
         public_animal = next(item for item in response.data if item["code"] == "TENANT-ONE")
         self.assertEqual(public_animal["shelter_name"], self.shelter_one.name)
 
+    def test_public_impact_stats_are_global(self):
+        animal_one = Animal.objects.get(code="TENANT-ONE")
+        animal_two = Animal.objects.get(code="TENANT-TWO")
+        for animal in [animal_one, animal_two]:
+            animal.status = Animal.Status.AVAILABLE
+            animal.adoption_ready = True
+            animal.is_public = True
+            animal.save(update_fields=["status", "adoption_ready", "is_public", "updated_at"])
+
+        ShelterTask.objects.create(
+            shelter=self.shelter_one,
+            title="Revisar medicamento",
+            description="Pendiente",
+            created_by=self.admin_one,
+            status=ShelterTask.Status.COMPLETED,
+        )
+        ShelterTask.objects.create(
+            shelter=self.shelter_two,
+            title="Actualizar inventario",
+            description="Pendiente",
+            created_by=self.admin_one,
+            status=ShelterTask.Status.PENDING,
+        )
+        adopter_user = User.objects.create_user(username="adopter@example.com", email="adopter@example.com", password="temporary-pass")
+        adopter_user.profile.role = UserProfile.Role.ADOPTER
+        adopter_user.profile.save(update_fields=["role"])
+        adopter = Adopter.objects.create(
+            user=adopter_user,
+            full_name="Adoptante Uno",
+            document_type="CC",
+            document="12345",
+            phone="3000000009",
+            email="adopter@example.com",
+        )
+        AdoptionApplication.objects.create(
+            animal=animal_one,
+            adopter=adopter,
+            status=AdoptionApplication.Status.FORMALIZED,
+            motivation="Proceso exitoso",
+            shelter_responsible=self.admin_one,
+        )
+
+        response = self.client.get("/api/public/impact-stats/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["animals_registered"], 2)
+        self.assertEqual(response.data["available"], 2)
+        self.assertEqual(response.data["adoptions"], 1)
+        self.assertEqual(response.data["alerts_attended_rate"], 50)
+
     def test_staff_can_update_own_profile(self):
         self.client.force_authenticate(self.admin_one)
         admin_response = self.client.patch("/api/profile/", {"position": "Coordinadora", "phone": "3000000009"}, format="json")
@@ -189,6 +239,16 @@ class TenantIsolationTests(APITestCase):
         response = self.client.post(
             "/api/auth/token/",
             {"username": "ADMIN-UNO@example.com", "password": "temporary-pass"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("access", response.data)
+
+    def test_shelter_admin_can_log_in_with_shelter_code(self):
+        response = self.client.post(
+            "/api/auth/token/",
+            {"username": self.shelter_one.code.lower(), "password": "temporary-pass"},
             format="json",
         )
 

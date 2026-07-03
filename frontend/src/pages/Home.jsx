@@ -1,4 +1,6 @@
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { api } from "../api/client";
 import heroImage from "../assets/dog-home.jpg";
 import logoPaw from "../assets/logo-paw-blue.png";
 
@@ -25,14 +27,27 @@ const features = [
   },
 ];
 
-const stats = [
-  ["50+", "Animales registrados"],
-  ["35", "Disponibles"],
-  ["10+", "Adopciones"],
-  ["100%", "Alertas atendidas"],
-];
-
 export default function Home() {
+  const [impact, setImpact] = useState({
+    animals_registered: 0,
+    available: 0,
+    adoptions: 0,
+    alerts_attended_rate: 100,
+  });
+
+  useEffect(() => {
+    api.get("/public/impact-stats/")
+      .then(({ data }) => setImpact(data))
+      .catch(() => {});
+  }, []);
+
+  const stats = useMemo(() => ([
+    { value: impact.animals_registered, label: "Animales registrados", suffix: "+" },
+    { value: impact.available, label: "Disponibles" },
+    { value: impact.adoptions, label: "Adopciones", suffix: "+" },
+    { value: impact.alerts_attended_rate, label: "Alertas atendidas", suffix: "%" },
+  ]), [impact]);
+
   return (
     <main className="home-page">
       <section className="home-hero">
@@ -78,10 +93,10 @@ export default function Home() {
       </section>
 
       <section className="home-stats" aria-label="Indicadores de impacto">
-        {stats.map(([value, label]) => (
-          <article key={label}>
-            <strong>{value}</strong>
-            <span>{label}</span>
+        {stats.map((item) => (
+          <article key={item.label}>
+            <strong><AnimatedNumber value={item.value} suffix={item.suffix} /></strong>
+            <span>{item.label}</span>
           </article>
         ))}
       </section>
@@ -97,4 +112,26 @@ export default function Home() {
       </section>
     </main>
   );
+}
+
+function AnimatedNumber({ value, suffix = "" }) {
+  const [displayValue, setDisplayValue] = useState(0);
+
+  useEffect(() => {
+    const target = Number(value) || 0;
+    let frameId = 0;
+    const duration = 700;
+    const start = performance.now();
+
+    const tick = (now) => {
+      const progress = Math.min((now - start) / duration, 1);
+      setDisplayValue(Math.round(target * progress));
+      if (progress < 1) frameId = window.requestAnimationFrame(tick);
+    };
+
+    frameId = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(frameId);
+  }, [value]);
+
+  return `${displayValue}${suffix}`;
 }

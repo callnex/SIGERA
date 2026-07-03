@@ -54,6 +54,12 @@ def find_user_for_login(value):
     submitted_value = normalize_username(value)
     if not submitted_value:
         return None
+    matched_shelter_admin = User.objects.filter(
+        profile__shelter__code__iexact=submitted_value,
+        profile__role=UserProfile.Role.ADMIN,
+    ).first()
+    if matched_shelter_admin:
+        return matched_shelter_admin
     return (
         User.objects.filter(email__iexact=submitted_value).first()
         or User.objects.filter(username__iexact=submitted_value).first()

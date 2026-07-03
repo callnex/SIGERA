@@ -6,6 +6,12 @@ import officialLogo from "../assets/logo-sigera-official.png";
 
 const initialForm = { username: "", password: "" };
 
+function normalizeLoginValue(value, isShelter) {
+  const trimmed = value.trim();
+  if (isShelter && /^sig-/i.test(trimmed)) return trimmed.toUpperCase();
+  return trimmed;
+}
+
 export default function Login() {
   const { login, logout } = useAuth();
   const navigate = useNavigate();
@@ -27,7 +33,7 @@ export default function Login() {
     event.preventDefault();
     setError("");
     try {
-      const user = await login(form.username.trim(), form.password);
+      const user = await login(normalizeLoginValue(form.username, isShelter), form.password);
       const role = user.profile?.role;
       if (accountType === "shelter" && !["admin", "vet", "volunteer"].includes(role)) {
         logout();
@@ -88,7 +94,7 @@ export default function Login() {
         </div>
         <div className="login-context"><span><i className={`bi ${isShelter ? "bi-shield-lock" : "bi-person-heart"}`} /></span><div><strong>{isShelter ? "Administracion del refugio" : "Cuenta de adoptante"}</strong><small>{isShelter ? "Ingresa con el codigo SIGERA asignado a tu refugio." : "Ingresa para consultar y continuar tus procesos de adopcion."}</small></div></div>
         {error && <div className="alert error">{error}</div>}
-        <label>{isShelter ? "Correo electronico o codigo del refugio" : "Correo electronico"}<input placeholder={isShelter ? "correo@refugio.org o SIG-ABC123" : "correo@ejemplo.com"} value={form.username} autoComplete="username" onChange={(event) => setForm({ ...form, username: event.target.value })} required /></label>
+        <label>{isShelter ? "Correo electronico o codigo del refugio" : "Correo electronico"}<input placeholder={isShelter ? "correo@refugio.org o SIG-ABC123" : "correo@ejemplo.com"} value={form.username} autoComplete="username" onChange={(event) => setForm({ ...form, username: normalizeLoginValue(event.target.value, isShelter) })} required /></label>
         <label className="password-label">
           <span>Contrasena<button className="forgot-link" type="button" onClick={() => setRecovery(true)}>Olvidaste tu contrasena?</button></span>
           <span className="password-input"><input type={showPassword ? "text" : "password"} value={form.password} autoComplete="current-password" onChange={(event) => setForm({ ...form, password: event.target.value })} required /><button className="password-toggle" type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? "Ocultar contrasena" : "Ver contrasena"}><i className={`bi ${showPassword ? "bi-eye-slash" : "bi-eye"}`} /></button></span>

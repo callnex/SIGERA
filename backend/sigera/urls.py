@@ -34,6 +34,7 @@ urlpatterns = [
     path("api/shelter-settings/", views.ShelterSettingsView.as_view(), name="shelter_settings"),
     path("api/catalog/", views.PublicCatalogView.as_view(), name="public_catalog"),
     path("api/catalog/<int:pk>/", views.PublicAnimalDetailView.as_view(), name="public_animal_detail"),
+    path("api/public/impact-stats/", views.PublicImpactStatsView.as_view(), name="public_impact_stats"),
     path("api/reports/summary/", views.ReportSummaryView.as_view(), name="report_summary"),
     path("api/reports/adoptions.pdf", views.AdoptionReportPdfView.as_view(), name="adoption_report_pdf"),
     path("api/animals/<int:pk>/medical-expedient.pdf", views.MedicalExpedientPdfView.as_view(), name="medical_expedient_pdf"),
